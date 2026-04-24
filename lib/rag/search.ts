@@ -2,9 +2,8 @@
  * RAG Search — hybrid FAISS semantic search + FTS5 keyword fallback.
  * Returns top-k papers/proteins as grounded context for the LLM.
  */
-import { searchPapers, searchProteins, type Paper, type Protein } from "@/lib/db/sqlite"
+import { searchPapers, searchProteins, type Paper } from "@/lib/db/sqlite"
 import { execSync } from "child_process"
-import path from "path"
 
 function faissSearch(query: string, k: number): Array<{id:number;title:string;year:string;source:string;score:number}> {
   try {
@@ -50,11 +49,12 @@ export function ragSearch(query: string, topK = 6): RagResult[] {
     papers = searchPapers(`${query} ${terms}`, topK)
   }
 
+  // For FAISS hits, fetch full abstracts from DB for chunked snippets
   const faissHits: RagResult[] = faissResults.map(r => ({
     type:    "paper" as const,
     id:      r.id,
     title:   r.title,
-    snippet: `(semantic match, score ${r.score})`,
+    snippet: `(semantic ${r.score.toFixed(3)})`,
     source:  r.source,
     year:    r.year,
   }))
@@ -63,7 +63,7 @@ export function ragSearch(query: string, topK = 6): RagResult[] {
     type:    "paper" as const,
     id:      p.id,
     title:   p.title,
-    snippet: truncate(p.abstract, 300),
+    snippet: chunkSnippet(p.abstract, query, 300),
     source:  p.source,
     year:    p.year,
   }))
@@ -96,7 +96,32 @@ function isProteinQuery(q: string): boolean {
   return proteinKeywords.some(k => q.toLowerCase().includes(k))
 }
 
-function truncate(s: string | null | undefined, len: number): string {
-  if (!s) return ""
-  return s.length > len ? s.slice(0, len) + "…" : s
+/**
+ * Chunked snippet: split abstract into 200-word overlapping windows,
+ * return the chunk most relevant to the query (contains most query terms).
+ * Falls back to first 300 chars if no chunk matches.
+ */
+function chunkSnippet(abstract: string | null | undefined, query: string, maxLen = 300): string {
+  if (!abstract) return ""
+  if (abstract.length <= maxLen) return abstract
+
+  const words    = abstract.split(/\s+/)
+  const qTerms   = new Set(query.toLowerCase().split(/\s+/).filter(t => t.length > 3))
+  const WINDOW   = 50   // ~200 words
+  const STEP     = 25   // 50% overlap
+
+  let bestChunk = abstract.slice(0, maxLen) + "…"
+  let bestScore = -1
+
+  for (let i = 0; i < words.length - WINDOW; i += STEP) {
+    const chunk     = words.slice(i, i + WINDOW).join(" ")
+    const chunkLow  = chunk.toLowerCase()
+    const score     = [...qTerms].filter(t => chunkLow.includes(t)).length
+    if (score > bestScore) {
+      bestScore = score
+      bestChunk = chunk.length > maxLen ? chunk.slice(0, maxLen) + "…" : chunk
+    }
+  }
+  return bestChunk
 }
+
