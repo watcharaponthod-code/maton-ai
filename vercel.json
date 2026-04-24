@@ -1,0 +1,47 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron?agent=research",
+      "schedule": "0,15,30,45 * * * *"
+    },
+    {
+      "path": "/api/cron?agent=coding",
+      "schedule": "2,17,32,47 * * * *"
+    },
+    {
+      "path": "/api/cron?agent=testing",
+      "schedule": "4,19,34,49 * * * *"
+    },
+    {
+      "path": "/api/cron?agent=bug-hunter",
+      "schedule": "6,21,36,51 * * * *"
+    },
+    {
+      "path": "/api/cron?agent=ui-ux",
+      "schedule": "8,23,38,53 * * * *"
+    },
+    {
+      "path": "/api/cron?agent=ops",
+      "schedule": "10,25,40,55 * * * *"
+    },
+    {
+      "path": "/api/cron?agent=project-manager",
+      "schedule": "12,27,42,57 * * * *"
+    },
+    {
+      "path": "/api/cron?agent=chief",
+      "schedule": "14,29,44,59 * * * *"
+    }
+  ],
+  "functions": {
+    "app/api/cron/route.ts": {
+      "maxDuration": 300
+    },
+    "app/api/chat/route.ts": {
+      "maxDuration": 120
+    },
+    "app/api/meeting/route.ts": {
+      "maxDuration": 300
+    }
+  }
+}

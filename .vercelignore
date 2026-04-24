@@ -1,0 +1,9 @@
+data/science.db
+data/faiss_papers.index
+data/faiss_id_map.json
+data/faiss_metas.json
+data/faiss_vectorizer.pkl
+data/faiss_meta.json
+scripts/
+*.pyc
+__pycache__/
